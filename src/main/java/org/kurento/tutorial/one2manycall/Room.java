@@ -75,6 +75,7 @@ public class Room implements Closeable {
     log.debug("PARTICIPANT {}: Leaving room {}", user.getName(), this.name);
     this.removeParticipant(user.getName());
     user.close();
+    user.stop(participants);
   }
 
   private Collection<String> joinRoom(UserSession newParticipant) throws IOException {
@@ -148,6 +149,15 @@ public class Room implements Closeable {
 
   public UserSession getParticipant(String name) {
     return participants.get(name);
+  }
+  public UserSession getTeacher() {
+    for (final UserSession participant : participants.values()) {
+        if(participant.getName().contains("teacher")){
+            log.info(participant.getName());
+          return participant;
+        }
+    }
+    return null;
   }
 
   @Override

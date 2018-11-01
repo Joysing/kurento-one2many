@@ -18,7 +18,7 @@
 var ws = new WebSocket('wss://' + location.host + '/call');
 var video,screenVideo;
 var webRtcPeer,screenWebRtcPeer;
-var name;
+var name,roomName;
 
 window.onload = function() {
 	console = new Console();
@@ -38,7 +38,7 @@ ws.onmessage = function(message) {
 
 	switch (parsedMessage.id) {
 	case 'existingParticipants':
-		if(parsedMessage.name==='teacher'){
+		if(parsedMessage.name.toString().indexOf('teacher')!==-1){
             presenter();
 		}else{
 			viewer();
@@ -46,7 +46,10 @@ ws.onmessage = function(message) {
 
         break;
 	case 'newParticipantArrived':
-	    alert("newParticipantArrived")
+	    console.log(parsedMessage.name+" online");
+	    break;
+	case 'participantLeft':
+	    console.log(parsedMessage.name+" offline");
 	    break;
 	case 'presenterResponse':
 		presenterResponse(parsedMessage);
@@ -82,16 +85,16 @@ ws.onmessage = function(message) {
 
 function register() {
     name = document.getElementById('name').value;
-    var room = document.getElementById('roomName').value;
+    roomName = document.getElementById('roomName').value;
 
-    // document.getElementById('room-header').innerText = room+" "+name;
+    document.getElementById('room-header').innerText = roomName+" "+name;
     document.getElementById('join').style.display = 'none';
     document.getElementById('room').style.display = 'block';
 
     var message = {
         id : 'joinRoom',
         name : name,
-        room : room,
+        room : roomName
     }
     sendMessage(message);
 }
@@ -166,44 +169,44 @@ function presenter() {
 
 		enableStopButton();
 	}
-	// if (!screenWebRtcPeer) {
-	// 	showSpinner(screenVideo);
-    //     //屏幕流
-    //     getScreenConstraints(true,function(error, screen_constraints) {
-    //         if (error) {
-    //             return alert(error);
-    //         }
-    //
-    //         navigator.getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-    //         navigator.getUserMedia({
-    //             video: screen_constraints
-    //         }, function(stream) {
-    //             var mediaConstraints = {
-    //                 audio: false,
-    //                 video: {
-    //                     width: { min: 1024, ideal: 1280, max: 1920 },
-    //                     height: { min: 576, ideal: 720, max: 1080 },
-    //                 }
-    //             };
-    //             var options = {
-    //                 localVideo : screenVideo,
-    //                 onicecandidate : onIceCandidateScreen,
-    //                 mediaConstraints:mediaConstraints,
-    //                 videoStream:stream,
-    //             }
-    //
-    //             screenWebRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(options,
-    //                 function(error) {
-    //                     if (error) {
-    //                         return console.error(error);
-    //                     }
-    //                     screenWebRtcPeer.generateOffer(onOfferPresenterScreen);
-    //                 });
-    //         }, function(error) {
-    //             alert(JSON.stringify(error, null, '\t'));
-    //         });
-    //     });
-	// }
+	if (!screenWebRtcPeer) {
+		showSpinner(screenVideo);
+        //屏幕流
+        getScreenConstraints(true,function(error, screen_constraints) {
+            if (error) {
+                return alert(error);
+            }
+
+            navigator.getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+            navigator.getUserMedia({
+                video: screen_constraints
+            }, function(stream) {
+                var mediaConstraints = {
+                    audio: false,
+                    video: {
+                        width: { min: 1024, ideal: 1280, max: 1920 },
+                        height: { min: 576, ideal: 720, max: 1080 },
+                    }
+                };
+                var options = {
+                    localVideo : screenVideo,
+                    onicecandidate : onIceCandidateScreen,
+                    mediaConstraints:mediaConstraints,
+                    videoStream:stream,
+                }
+
+                screenWebRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendonly(options,
+                    function(error) {
+                        if (error) {
+                            return console.error(error);
+                        }
+                        screenWebRtcPeer.generateOffer(onOfferPresenterScreen);
+                    });
+            }, function(error) {
+                alert(JSON.stringify(error, null, '\t'));
+            });
+        });
+	}
 }
 
 function onOfferPresenter(error, offerSdp) {
@@ -247,31 +250,31 @@ function viewer() {
 
 		enableStopButton();
 	}
-	// if (!screenWebRtcPeer) {
-	// 	showSpinner(screenVideo);
-    //
-    //     var mediaConstraints = {
-    //         audio: false,
-    //         video: {
-    //             width: { min: 1024, ideal: 1280, max: 1920 },
-    //             height: { min: 576, ideal: 720, max: 1080 },
-    //         }
-    //     };
-	// 	var screenOptions = {
-	// 		remoteVideo : screenVideo,
-	// 		onicecandidate : onIceCandidateScreen,
-    //         mediaConstraints:mediaConstraints
-	// 	}
-    //     screenWebRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(screenOptions,
-	// 			function(error) {
-	// 				if (error) {
-	// 					return console.error(error);
-	// 				}
-	// 				this.generateOffer(onOfferViewerScreen);
-	// 			});
-    //
-	// 	enableStopButton();
-	// }
+	if (!screenWebRtcPeer) {
+		showSpinner(screenVideo);
+
+        var mediaConstraints = {
+            audio: false,
+            video: {
+                width: { min: 1024, ideal: 1280, max: 1920 },
+                height: { min: 576, ideal: 720, max: 1080 },
+            }
+        };
+		var screenOptions = {
+			remoteVideo : screenVideo,
+			onicecandidate : onIceCandidateScreen,
+            mediaConstraints:mediaConstraints
+		}
+        screenWebRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(screenOptions,
+				function(error) {
+					if (error) {
+						return console.error(error);
+					}
+					this.generateOffer(onOfferViewerScreen);
+				});
+
+		enableStopButton();
+	}
 }
 
 function onOfferViewer(error, offerSdp) {
@@ -281,6 +284,7 @@ function onOfferViewer(error, offerSdp) {
 	var message = {
 		id : 'viewer',
         name:name,
+        room:roomName,
 		sdpOffer : offerSdp
 	}
 	sendMessage(message);
@@ -293,6 +297,7 @@ function onOfferViewerScreen(error, offerSdp) {
 	var message = {
 		id : 'viewerScreen',
         name:name,
+        room:roomName,
 		sdpOffer : offerSdp
 	}
 	sendMessage(message);
