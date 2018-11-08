@@ -18,7 +18,7 @@
 var ws = new WebSocket('wss://' + location.host + '/call');
 var video,screenVideo;
 var webRtcPeer,screenWebRtcPeer;
-var name,roomName;
+var name=new Date().getTime(),roomName='888';
 function initName(username){
     name=username;
 }
@@ -32,7 +32,14 @@ window.onbeforeunload = function() {
     console.log("页面刷新或关闭了");
 	ws.close();
 };
-
+ws.onopen=function (ev) {
+    var message = {
+        id : 'testjoinRoom',
+        name:name,
+        room:roomName
+    };
+    sendMessage(message);
+};
 ws.onmessage = function(message) {
 	var parsedMessage = JSON.parse(message.data);
 	console.info('Received message: ' + message.data);
@@ -399,3 +406,8 @@ $(document).delegate('*[data-toggle="lightbox"]', 'click', function(event) {
 	event.preventDefault();
 	$(this).ekkoLightbox();
 });
+function getQueryString(name) {
+    var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+    var r = window.location.search.substr(1).match(reg);
+    if (r != null) return unescape(r[2]); return null;
+}

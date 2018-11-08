@@ -15,11 +15,13 @@
  *
  */
 
-package org.kurento.tutorial.one2manycall;
+package com.sendroid.kurento.one2manycall;
 
 import org.kurento.client.KurentoClient;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
@@ -27,7 +29,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 
 @SpringBootApplication
 @EnableWebSocket
-public class One2ManyCallApp implements WebSocketConfigurer {
+public class One2ManyCallApp extends SpringBootServletInitializer implements WebSocketConfigurer {
 
   @Bean
   public UserRegistry registry() {
@@ -57,5 +59,8 @@ public class One2ManyCallApp implements WebSocketConfigurer {
   public static void main(String[] args) throws Exception {
     SpringApplication.run(One2ManyCallApp.class, args);
   }
-
+    @Override//为了打包springboot项目
+    protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {
+        return builder.sources(this.getClass());
+    }
 }

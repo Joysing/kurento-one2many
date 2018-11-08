@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title>Login</title>
+	<link rel="stylesheet" type="text/css" href="../static/css/style.css" th:href="@{/static/css/style.css}"/>
+	<link rel="stylesheet" href="../static/css/bootstrap.css" th:href="@{/static/css/bootstrap.css}"/>
+	<link rel="stylesheet" href="../static/css/bootstrap-theme.css" th:href="@{/static/css/bootstrap-theme.css}"/>
+	<script type="text/javascript" src="../static/js/jquery-3.3.1.min.js" th:src="@{/static/js/jquery-3.3.1.min.js}"></script>
+	<script type="text/javascript" src="../static/js/boostrap-validator-0.11.9.js" th:src="@{/static/js/boostrap-validator-0.11.9.js}"></script>
+</head>
+<body class="bg-grey">
+<div class="container">
+	<div class="height-20"></div>
+	<section class="col-lg-4"></section>
+	<section id="content" class="col-lg-4 panel panel-default">
+		<h1 class="text-center">LOG IN</h1>
+		<form action="" th:action="@{/login}" method="post" data-toggle="validator">
+			<div class="form-group">
+				<label>Username</label>
+				<input type="text" class="form-control" value="" name="username" required/>
+			</div>
+			<div class="form-group">
+				<label>Password</label>
+				<input type="password" class="form-control" value="admin" name="password" required/>
+			</div>
+			<div role="alert" th:if="${param.error}" class="alert bg-danger">
+				<span class="help-block text-center">There was an error, please try again.</span>
+			</div>
+			<div class="text-center">
+				<button type="submit" class="btn btn-success btn-lg btn-block">login</button>
+			</div>
+		</form>
+		<div class="height-20"></div>
+	</section>
+</div>
+</body>
+</html>

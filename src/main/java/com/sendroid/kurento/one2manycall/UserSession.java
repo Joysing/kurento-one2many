@@ -15,9 +15,10 @@
  *
  */
 
-package org.kurento.tutorial.one2manycall;
+package com.sendroid.kurento.one2manycall;
 
 import com.google.gson.JsonObject;
+import com.sendroid.kurento.one2manycall.entity.User;
 import org.kurento.client.Continuation;
 import org.kurento.client.IceCandidate;
 import org.kurento.client.MediaPipeline;
@@ -25,6 +26,7 @@ import org.kurento.client.WebRtcEndpoint;
 import org.kurento.jsonrpc.JsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -39,36 +41,42 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class UserSession implements Cloneable {
 
-  private static final Logger log = LoggerFactory.getLogger(UserSession.class);
+    private static final Logger log = LoggerFactory.getLogger(UserSession.class);
 
-  private final String name;
-  private final String roomName;
-  private final WebSocketSession session;
-  private WebRtcEndpoint webRtcEndpoint;
-  private WebRtcEndpoint webRtcEndpointScreen;
+    private final String name;
+    private final String roomName;
+    private User.AccountType accountType;
+    private final WebSocketSession session;
+    private WebRtcEndpoint webRtcEndpoint;
+    private WebRtcEndpoint webRtcEndpointScreen;
+
+    @Autowired
+    private RoomManager roomManager;
 
     UserSession(final String name,
+                User.AccountType accountType,
                 String roomName,
                 final WebSocketSession session,
                 MediaPipeline pipeline) {
-    this.session = session;
-    this.name = name;
-    this.roomName = roomName;
-    webRtcEndpoint = new WebRtcEndpoint.Builder(pipeline).build();
-    webRtcEndpointScreen = new WebRtcEndpoint.Builder(pipeline).build();
+        this.session = session;
+        this.name = name;
+        this.roomName = roomName;
+        this.accountType = accountType;
+        webRtcEndpoint = new WebRtcEndpoint.Builder(pipeline).build();
+        webRtcEndpointScreen = new WebRtcEndpoint.Builder(pipeline).build();
 
-    addIceCandidateFoundListener(webRtcEndpoint,"iceCandidate");
-    addIceCandidateFoundListener(webRtcEndpointScreen,"iceCandidateScreen");
-  }
+        addIceCandidateFoundListener(webRtcEndpoint, "iceCandidate");
+        addIceCandidateFoundListener(webRtcEndpointScreen, "iceCandidateScreen");
+    }
 
     synchronized void receiveFrom(UserSession teacherSession, String sdpOffer, String responseType) throws IOException {
         log.info("USER {}: connecting with {} in room {}", this.name, teacherSession.getName(), this.roomName);
 
         log.trace("USER {}: SdpOffer for {} is {}", this.name, teacherSession.getName(), sdpOffer);
         String ipSdpAnswer = null;
-        if ("presenterResponse".equals(responseType)||"viewerResponse".equals(responseType)) {
+        if ("presenterResponse".equals(responseType) || "viewerResponse".equals(responseType)) {
             ipSdpAnswer = webRtcEndpoint.processOffer(sdpOffer);
-        } else if ("presenterScreenResponse".equals(responseType)||"viewerScreenResponse".equals(responseType)) {
+        } else if ("presenterScreenResponse".equals(responseType) || "viewerScreenResponse".equals(responseType)) {
             ipSdpAnswer = webRtcEndpointScreen.processOffer(sdpOffer);
         }
         final JsonObject scParams = new JsonObject();
@@ -84,7 +92,7 @@ public class UserSession implements Cloneable {
             webRtcEndpoint.gatherCandidates();
         } else if ("presenterScreenResponse".equals(responseType)) {
             webRtcEndpointScreen.gatherCandidates();
-        }else if ("viewerResponse".equals(responseType)) {
+        } else if ("viewerResponse".equals(responseType)) {
             teacherSession.getWebRtcEndpoint().connect(webRtcEndpoint);
             webRtcEndpoint.gatherCandidates();
         } else if ("viewerScreenResponse".equals(responseType)) {
@@ -93,7 +101,7 @@ public class UserSession implements Cloneable {
         }
     }
 
-    private void addIceCandidateFoundListener(WebRtcEndpoint presenterWebRtc,final String responseId) {
+    private void addIceCandidateFoundListener(WebRtcEndpoint presenterWebRtc, final String responseId) {
         presenterWebRtc.addIceCandidateFoundListener(event -> {
             JsonObject response = new JsonObject();
             response.addProperty("id", responseId);
@@ -108,31 +116,33 @@ public class UserSession implements Cloneable {
             }
         });
     }
-  public WebSocketSession getSession() {
-    return session;
-  }
 
-  public void sendMessage(JsonObject message) throws IOException {
-    log.debug("Sending message from user with session Id '{}': {}", session.getId(), message);
-      synchronized (session) {
-          session.sendMessage(new TextMessage(message.toString()));
-      }
-  }
-
-  public WebRtcEndpoint getWebRtcEndpoint() {
-    return webRtcEndpoint;
-  }
-
-    public WebRtcEndpoint getWebRtcEndpointScreen() {
-    return webRtcEndpointScreen;
-  }
+    public void sendMessage(JsonObject message) throws IOException {
+        log.debug("Sending message from user with session Id '{}': {}", session.getId(), message);
+        synchronized (session) {
+            session.sendMessage(new TextMessage(message.toString()));
+        }
+    }
 
     public void addCandidate(IceCandidate candidate) {
-       webRtcEndpoint.addIceCandidate(candidate);
-  }
-  public void addCandidateScreen(IceCandidate candidate) {
-      webRtcEndpointScreen.addIceCandidate(candidate);
-  }
+        webRtcEndpoint.addIceCandidate(candidate);
+    }
+
+    public void addCandidateScreen(IceCandidate candidate) {
+        webRtcEndpointScreen.addIceCandidate(candidate);
+    }
+
+    public WebRtcEndpoint getWebRtcEndpoint() {
+        return webRtcEndpoint;
+    }
+
+    public WebRtcEndpoint getWebRtcEndpointScreen() {
+        return webRtcEndpointScreen;
+    }
+
+    public WebSocketSession getSession() {
+        return session;
+    }
 
     public String getName() {
         return name;
@@ -142,14 +152,20 @@ public class UserSession implements Cloneable {
         return roomName;
     }
 
-    synchronized void stop(ConcurrentMap<String, UserSession> participants) throws IOException {
-        if (name.contains("teacher")) {
+    public User.AccountType getAccountType() {
+        return accountType;
+    }
+
+    synchronized void stop() throws IOException {
+        if (accountType == User.AccountType.TEACHER) {
+            Room room=roomManager.getRoom(roomName);
+            ConcurrentMap<String, UserSession> participants=room.getParticipants();
             for (UserSession viewer : participants.values()) {
                 JsonObject response = new JsonObject();
                 response.addProperty("id", "stopCommunication");
                 viewer.sendMessage(response);
             }
-        } else{
+        } else {
             if (getWebRtcEndpoint() != null) {
                 getWebRtcEndpoint().release();
             }

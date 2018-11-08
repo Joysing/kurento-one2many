@@ -15,12 +15,13 @@
  *
  */
 
-package org.kurento.tutorial.one2manycall;
+package com.sendroid.kurento.one2manycall;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.sendroid.kurento.one2manycall.entity.User;
 import org.kurento.client.Continuation;
 import org.kurento.client.MediaPipeline;
 import org.slf4j.Logger;
@@ -46,6 +47,7 @@ public class Room implements Closeable {
   private final ConcurrentMap<String, UserSession> participants = new ConcurrentHashMap<>();
   private final MediaPipeline pipeline;
   private final String name;
+  private UserSession teacher;
 
   public String getName() {
     return name;
@@ -62,10 +64,13 @@ public class Room implements Closeable {
     this.close();
   }
 
-  public UserSession join(String userName, WebSocketSession session) throws IOException {
+  public UserSession join(String userName, User.AccountType accountType, WebSocketSession session) throws IOException {
     log.info("ROOM {}: adding participant {}", userName, userName);
-    final UserSession participant = new UserSession(userName, this.name, session, this.pipeline);
+    final UserSession participant = new UserSession(userName,accountType, this.name, session, this.pipeline);
     joinRoom(participant);
+    if(teacher==null){
+        teacher=participant;
+    }
     participants.put(participant.getName(), participant);
     sendParticipantNames(participant);
     return participant;
@@ -73,15 +78,19 @@ public class Room implements Closeable {
 
   public void leave(UserSession user) throws IOException {
     log.debug("PARTICIPANT {}: Leaving room {}", user.getName(), this.name);
+    if(user.getAccountType()== User.AccountType.TEACHER){
+        this.teacher=null;
+    }
     this.removeParticipant(user.getName());
     user.close();
-    user.stop(participants);
+    user.stop();
   }
 
   private Collection<String> joinRoom(UserSession newParticipant) throws IOException {
     final JsonObject newParticipantMsg = new JsonObject();
     newParticipantMsg.addProperty("id", "newParticipantArrived");
     newParticipantMsg.addProperty("name", newParticipant.getName());
+    newParticipantMsg.addProperty("count", getParticipantsCount()+1);//之前在线的人加上自己
 
     final List<String> participantsList = new ArrayList<>(participants.values().size());
     log.debug("ROOM {}: notifying other participants of new participant {}", name,
@@ -108,9 +117,9 @@ public class Room implements Closeable {
     final JsonObject participantLeftJson = new JsonObject();
     participantLeftJson.addProperty("id", "participantLeft");
     participantLeftJson.addProperty("name", name);
+    participantLeftJson.addProperty("count", getParticipantsCount());
     for (final UserSession participant : participants.values()) {
       try {
-//        participant.cancelVideoFrom(name);
         participant.sendMessage(participantLeftJson);
       } catch (final IOException e) {
         unnotifiedParticipants.add(participant.getName());
@@ -127,7 +136,7 @@ public class Room implements Closeable {
   public void sendParticipantNames(UserSession user) throws IOException {
 
     final JsonArray participantsArray = new JsonArray();
-    for (final UserSession participant : this.getParticipants()) {
+    for (final UserSession participant : this.getParticipants().values()) {
       if (!participant.equals(user)) {
         final JsonElement participantName = new JsonPrimitive(participant.getName());
         participantsArray.add(participantName);
@@ -137,27 +146,30 @@ public class Room implements Closeable {
     final JsonObject existingParticipantsMsg = new JsonObject();
     existingParticipantsMsg.addProperty("id", "existingParticipants");
     existingParticipantsMsg.addProperty("name", user.getName());
+    if(getTeacher()!=null&&user!=getTeacher()&&user.getAccountType()== User.AccountType.TEACHER) {
+      //已经有老师在这里直播了
+      existingParticipantsMsg.addProperty("accountType", "repeatTeacher");
+    }else{
+      existingParticipantsMsg.addProperty("accountType", user.getAccountType().toString());
+    }
     existingParticipantsMsg.add("data", participantsArray);
     log.debug("PARTICIPANT {}: sending a list of {} participants", user.getName(),
         participantsArray.size());
     user.sendMessage(existingParticipantsMsg);
   }
-
-  public Collection<UserSession> getParticipants() {
-    return participants.values();
+  public ConcurrentMap<String, UserSession> getParticipants() {
+    return participants;
   }
 
   public UserSession getParticipant(String name) {
     return participants.get(name);
   }
+  public int getParticipantsCount() {
+    return participants.size();
+  }
+
   public UserSession getTeacher() {
-    for (final UserSession participant : participants.values()) {
-        if(participant.getName().contains("teacher")){
-            log.info(participant.getName());
-          return participant;
-        }
-    }
-    return null;
+    return this.teacher;
   }
 
   @Override
