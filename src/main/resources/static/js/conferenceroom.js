@@ -66,7 +66,6 @@ ws.onmessage = function(message) {
 }
 
 function register() {
-	name = document.getElementById('name').value;
 	var room = document.getElementById('roomName').value;
 
 	document.getElementById('room-header').innerText = room+" "+name;

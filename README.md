@@ -1,11 +1,35 @@
 基于kurento（webrtc）实现的在线视频
 =====================
-实现两种功能：
-+ 一对多
-+ 多对多（群组）
 
 此系统的总体架构图：
-![]
+![image](https://github.com/Joysing/kurento-one2many/blob/master/src/main/resources/static/img/kurento-media-server.png?raw=true)
+
+实现两种功能：
+1. 一对多
+
+在这个实例有两种类型的用户：
++ 1个对等发送媒体（称之为Teacher）
++ N个对等体从Teacher接收媒体 （称之为Student）
+
+正常情况下Pipeline（媒体管道）由1 + N个互连的WebRtcEndpoints（端点）组成。
+
+但是我们的Teacher需要发送【摄像头】+【授课的电脑屏幕】两个视频流，
+
+所以我们创建的Pipeline是由2+2N个互连的WebRtcEndpoints组成
+
+逻辑图：
+
+![image](https://github.com/Joysing/kurento-one2many/blob/master/src/main/resources/static/img/one2many.png?raw=true)
+
+2. 多对多（群组）
++ 一个教室一个Pipeline（媒体管道）。这个Pipeline有多少个WebRtcEndpoint组成？
+在前一个实例知道，一对多的Pipeline由1 + N个互连的WebRtcEndpoints组成。同时发送屏幕的话就变成了2*（1+N）个。
+
++ 由此可知，现在N个客户端同时发送摄像头，这N个客户端同时也接收，需要N\*N个端点，N个客户端同时发送摄像头和屏幕的话，由于摄像头和屏幕是分别发送的，所以是2*（N\*N），而不是2N*2N。
+
+下图为N\*N个端点的逻辑图，如果是2*（N\*N）就是每个电脑再多一倍端点，
+![image](https://github.com/Joysing/kurento-one2many/blob/master/src/main/resources/static/img/group.png?raw=true)
+
 
 1.如何运行
 ---------------------
@@ -43,7 +67,9 @@ EOF
 + sudo service kurento-media-server start
 + sudo service kurento-media-server stop
 
-1.1.5 KMS的日志消息在/var/log/kurento-media-server/。
+1.1.5 修改com.sendroid.kurento.config.Constants.java中的KURENTO_MEDIA_SERVER为kms服务器地址，默认端口是8888
+
+1.1.6 KMS的日志消息在/var/log/kurento-media-server/。
 
 1.2 安装TURN服务器（穿透内网和防火墙）
 ---------------
@@ -76,3 +102,17 @@ EOF
 + 如果用户account_type为TEACHER，此用户的浏览器会打开摄像头。
 + 如果用户account_type为STUDENT，只加载TEACHER的画面。
 + 然而，在多对多房间中，所有用户都是打开摄像头。
+
+2.3 发送视频流到媒体服务器
++ 发送内容{id : 'presenter',
+            name:'用户名',
+            sdpOffer : {offerSdp}
+            }到 wss://{localhost}:{port}/call（如果是多对多则发送到 wss://{localhost}:{port}/groupcall）
++ offerSdp是调用浏览器的webrtc时返回的远程对等体，[例子](https://github.com/Joysing/kurento-one2many/blob/28d0e9ffd734088e8bdb90bde003a29e4ce42d38/src/main/resources/static/js/index.js#L216)
++ 每个浏览器窗口的offerSdp都不同
+
+2.4 从媒体服务器获得视频
++ 发送内容{id : 'viewer',
+            name:'用户名',
+            sdpOffer : {offerSdp}
+            }到 wss://{localhost}:{port}/call（如果是多对多则发送到 wss://{localhost}:{port}/groupcall）

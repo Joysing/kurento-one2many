@@ -84,7 +84,7 @@ public class SecurityConfig {
                     .cacheControl()
                     .and()
                     .frameOptions()
-                    .deny()
+                    .sameOrigin().httpStrictTransportSecurity().disable()
                     .and()
                     .exceptionHandling()
                     .accessDeniedPage("/access?error")

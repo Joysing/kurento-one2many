@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>welcome</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/reset.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/css/default.css">
+    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.4.0/css/font-awesome.min.css'>
+    <link rel="stylesheet" type="text/css" href="/static/css/guide.css">
+    <link rel="stylesheet"
+          href="webjars/bootstrap/3.3.6/dist/css/bootstrap.min.css">
+</head>
+<body>
+<article class="zzsc-container">
+
+    <h1>welcome <span sec:authentication="name"></span></h1>
+    <a id="logout" href="/logout" class="btn btn-primary"><span
+        class="glyphicon glyphicon-stop"></span> Logout</a>
+    <br><br><br>
+    <ul class="metro">
+        <li><i class="fa fa-gamepad"></i>
+            <span>一对多<label><input value="/one2many" hidden></label></span>
+        </li>
+        <li><i class="fa fa-comments-o"></i>
+            <span>多对多<label><input value="/group" hidden></label></span>
+        </li>
+    </ul>
+    <div class="box">
+        <span class="close"></span>
+        <iframe width="100%" height="100%"></iframe>
+    </div>
+</article>
+
+<script src="webjars/jquery/1.12.3/dist/jquery.min.js"></script>
+<script>
+    $(document).ready(function () {
+        var $box = $('.box');
+        $('.metro li').each(function () {
+            var color = $(this).css('backgroundColor');
+            var url = $(this).find("input").val();
+            $(this).click(function () {
+                $box.css('backgroundColor', color);
+                $box.addClass('open');
+                $box.find('iframe').attr("src", url);
+            });
+            $('.close').click(function () {
+                $box.removeClass('open');
+                $box.css('backgroundColor', 'transparent');
+            });
+        });
+    });
+
+</script>
+</body>
+</html>

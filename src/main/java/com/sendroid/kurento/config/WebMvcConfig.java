@@ -26,7 +26,8 @@ public class WebMvcConfig extends WebMvcConfigurationSupport {
         registry.addViewController("/login").setViewName("login");
         registry.addViewController("/test").setViewName("test");
         registry.addViewController("/group").setViewName("group");
-        registry.addViewController("/").setViewName("index");
+        registry.addViewController("/one2many").setViewName("one2many");
+        registry.addViewController("/").setViewName("guide");
         registry.setOrder(Ordered.HIGHEST_PRECEDENCE);
     }
     @Override
