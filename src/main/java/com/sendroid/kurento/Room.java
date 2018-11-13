@@ -15,13 +15,13 @@
  *
  */
 
-package com.sendroid.kurento.one2manycall;
+package com.sendroid.kurento;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.sendroid.kurento.one2manycall.entity.User;
+import com.sendroid.kurento.entity.User;
 import org.kurento.client.Continuation;
 import org.kurento.client.MediaPipeline;
 import org.slf4j.Logger;

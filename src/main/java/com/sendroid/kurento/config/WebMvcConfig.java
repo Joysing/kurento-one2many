@@ -1,4 +1,4 @@
-package com.sendroid.kurento.one2manycall.config;
+package com.sendroid.kurento.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -25,6 +25,7 @@ public class WebMvcConfig extends WebMvcConfigurationSupport {
     public void addViewControllers(ViewControllerRegistry registry) {
         registry.addViewController("/login").setViewName("login");
         registry.addViewController("/test").setViewName("test");
+        registry.addViewController("/group").setViewName("group");
         registry.addViewController("/").setViewName("index");
         registry.setOrder(Ordered.HIGHEST_PRECEDENCE);
     }

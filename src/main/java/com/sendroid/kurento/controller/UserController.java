@@ -1,7 +1,7 @@
-package com.sendroid.kurento.one2manycall.controller;
+package com.sendroid.kurento.controller;
 
-import com.sendroid.kurento.one2manycall.entity.User;
-import com.sendroid.kurento.one2manycall.service.UserService;
+import com.sendroid.kurento.entity.User;
+import com.sendroid.kurento.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;

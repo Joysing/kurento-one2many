@@ -23,7 +23,8 @@
     <script src="js/kurento-utils.js"></script>
     <script src="/static/js/index.js"></script>
     <script th:inline="javascript">
-        initName("teacher1");
+        var username = [[${session.SPRING_SECURITY_CONTEXT.authentication.principal.username}]];
+        initName(username);
     </script>
     <title>Kurento</title>
 </head>
@@ -31,6 +32,7 @@
 
 <div class="container">
     <div id="join" class="animate join">
+        <h1>welcome <span sec:authentication="name"></span></h1>
         <h1>Join a Room</h1>
         <span>教师加入房间：<br>
             1、教师加入房间时即为演示者身份，除非违背以下条件。<br>

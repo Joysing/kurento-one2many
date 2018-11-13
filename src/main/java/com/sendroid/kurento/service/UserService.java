@@ -1,7 +1,7 @@
-package com.sendroid.kurento.one2manycall.service;
+package com.sendroid.kurento.service;
 
-import com.sendroid.kurento.one2manycall.entity.User;
-import com.sendroid.kurento.one2manycall.respository.UserRepository;
+import com.sendroid.kurento.entity.User;
+import com.sendroid.kurento.respository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

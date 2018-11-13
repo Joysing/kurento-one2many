@@ -15,8 +15,9 @@
  *
  */
 
-package com.sendroid.kurento.one2manycall;
+package com.sendroid.kurento;
 
+import com.sendroid.kurento.config.Constants;
 import org.kurento.client.KurentoClient;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -29,7 +30,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 
 @SpringBootApplication
 @EnableWebSocket
-public class One2ManyCallApp extends SpringBootServletInitializer implements WebSocketConfigurer {
+public class KurentoApp extends SpringBootServletInitializer implements WebSocketConfigurer {
 
   @Bean
   public UserRegistry registry() {
@@ -47,17 +48,23 @@ public class One2ManyCallApp extends SpringBootServletInitializer implements Web
   }
 
   @Bean
+  public GroupCallHandler groupCallHandler() {
+    return new GroupCallHandler();
+  }
+
+  @Bean
   public KurentoClient kurentoClient() {
-    return KurentoClient.create("ws://192.168.236.130:8888/kurento");
+    return KurentoClient.create(Constants.KURENTO_MEDIA_SERVER);
   }
 
   @Override
   public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
     registry.addHandler(callHandler(), "/call");
+    registry.addHandler(groupCallHandler(), "/groupcall");
   }
 
   public static void main(String[] args) throws Exception {
-    SpringApplication.run(One2ManyCallApp.class, args);
+    SpringApplication.run(KurentoApp.class, args);
   }
     @Override//为了打包springboot项目
     protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {

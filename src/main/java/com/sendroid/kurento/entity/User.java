@@ -1,4 +1,4 @@
-package com.sendroid.kurento.one2manycall.entity;
+package com.sendroid.kurento.entity;
 
 import javax.persistence.*;
 

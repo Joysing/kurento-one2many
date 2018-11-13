@@ -1,10 +1,10 @@
-package com.sendroid.kurento.one2manycall;
+package com.sendroid.kurento;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
-import com.sendroid.kurento.one2manycall.entity.User;
-import com.sendroid.kurento.one2manycall.service.UserService;
+import com.sendroid.kurento.entity.User;
+import com.sendroid.kurento.service.UserService;
 import org.kurento.client.IceCandidate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,15 +125,23 @@ public class CallHandler extends TextWebSocketHandler {
     }
 
     private void joinRoom(JsonObject params, WebSocketSession session) throws IOException {
+        CallHandler.joinRoom(params, session,  roomManager, registry);
+    }
+
+    static void joinRoom(JsonObject params,
+                         WebSocketSession session,
+                         RoomManager roomManager,
+                         UserRegistry registry) throws IOException {
         final String roomName = params.get("room").getAsString();
         final String name = params.get("name").getAsString();
-        User.AccountType accountType=userService.findUserByUsername(name).getAccountType();
+        User.AccountType accountType = userService.findUserByUsername(name).getAccountType();
         log.info("PARTICIPANT {}: trying to join room {}", name, roomName);
 
         Room room = roomManager.getRoom(roomName);
-        final UserSession user = room.join(name, accountType,session);
+        final UserSession user = room.join(name, accountType, session);
         registry.register(user);
     }
+
     private void testjoinRoom(JsonObject params,WebSocketSession session) throws IOException {
         final String roomName = params.get("room").getAsString();
         final String name = params.get("name").getAsString();

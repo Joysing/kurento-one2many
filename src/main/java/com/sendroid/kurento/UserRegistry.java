@@ -15,7 +15,7 @@
  *
  */
 
-package com.sendroid.kurento.one2manycall;
+package com.sendroid.kurento;
 
 import org.springframework.web.socket.WebSocketSession;
 

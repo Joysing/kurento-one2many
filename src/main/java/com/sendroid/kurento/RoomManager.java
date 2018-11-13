@@ -15,7 +15,7 @@
  *
  */
 
-package com.sendroid.kurento.one2manycall;
+package com.sendroid.kurento;
 
 import org.kurento.client.KurentoClient;
 import org.slf4j.Logger;

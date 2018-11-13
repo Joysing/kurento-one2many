@@ -15,14 +15,11 @@
  *
  */
 
-package com.sendroid.kurento.one2manycall;
+package com.sendroid.kurento;
 
 import com.google.gson.JsonObject;
-import com.sendroid.kurento.one2manycall.entity.User;
-import org.kurento.client.Continuation;
-import org.kurento.client.IceCandidate;
-import org.kurento.client.MediaPipeline;
-import org.kurento.client.WebRtcEndpoint;
+import com.sendroid.kurento.entity.User;
+import org.kurento.client.*;
 import org.kurento.jsonrpc.JsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +28,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -47,8 +45,13 @@ public class UserSession implements Cloneable {
     private final String roomName;
     private User.AccountType accountType;
     private final WebSocketSession session;
+    private final MediaPipeline pipeline;
     private WebRtcEndpoint webRtcEndpoint;
     private WebRtcEndpoint webRtcEndpointScreen;
+
+    //多对多时使用的输入端点
+    private final ConcurrentMap<String, WebRtcEndpoint> incomingMedia = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, WebRtcEndpoint> incomingMediaScreen = new ConcurrentHashMap<>();
 
     @Autowired
     private RoomManager roomManager;
@@ -62,11 +65,12 @@ public class UserSession implements Cloneable {
         this.name = name;
         this.roomName = roomName;
         this.accountType = accountType;
+        this.pipeline = pipeline;
         webRtcEndpoint = new WebRtcEndpoint.Builder(pipeline).build();
         webRtcEndpointScreen = new WebRtcEndpoint.Builder(pipeline).build();
 
-        addIceCandidateFoundListener(webRtcEndpoint, "iceCandidate");
-        addIceCandidateFoundListener(webRtcEndpointScreen, "iceCandidateScreen");
+        addIceCandidateFoundListener(webRtcEndpoint, "iceCandidate",name);
+        addIceCandidateFoundListener(webRtcEndpointScreen, "iceCandidateScreen",name);
     }
 
     synchronized void receiveFrom(UserSession teacherSession, String sdpOffer, String responseType) throws IOException {
@@ -101,7 +105,7 @@ public class UserSession implements Cloneable {
         }
     }
 
-    private void addIceCandidateFoundListener(WebRtcEndpoint presenterWebRtc, final String responseId) {
+    private void addIceCandidateFoundListener(WebRtcEndpoint presenterWebRtc, final String responseId,String name) {
         presenterWebRtc.addIceCandidateFoundListener(event -> {
             JsonObject response = new JsonObject();
             response.addProperty("id", responseId);
@@ -158,8 +162,8 @@ public class UserSession implements Cloneable {
 
     synchronized void stop() throws IOException {
         if (accountType == User.AccountType.TEACHER) {
-            Room room=roomManager.getRoom(roomName);
-            ConcurrentMap<String, UserSession> participants=room.getParticipants();
+            Room room = roomManager.getRoom(roomName);
+            ConcurrentMap<String, UserSession> participants = room.getParticipants();
             for (UserSession viewer : participants.values()) {
                 JsonObject response = new JsonObject();
                 response.addProperty("id", "stopCommunication");
@@ -198,5 +202,129 @@ public class UserSession implements Cloneable {
             public void onError(Throwable cause) {
             }
         });
+    }
+
+    void receiveFromGroup(UserSession sender, String sdpOffer, String Answer) throws IOException {
+        log.info("USER {}: connecting with {} in room {}", this.name, sender.getName(), this.roomName);
+
+        log.trace("USER {}: SdpOffer for {} is {}", this.name, sender.getName(), sdpOffer);
+        String ipSdpAnswer = null;
+        if ("receiveVideoAnswer".equals(Answer)) {
+            ipSdpAnswer = this.getEndpointForUser(sender).processOffer(sdpOffer);
+        } else if ("receiveScreenAnswer".equals(Answer)) {
+            ipSdpAnswer = this.getScreenEndpointForUser(sender).processOffer(sdpOffer);
+        }
+        final JsonObject scParams = new JsonObject();
+        scParams.addProperty("id", Answer);
+        scParams.addProperty("name", sender.getName());
+        scParams.addProperty("sdpAnswer", ipSdpAnswer);
+
+        log.trace("USER {}: SdpAnswer for {} is {}", this.name, sender.getName(), ipSdpAnswer);
+        this.sendMessage(scParams);
+        log.debug("gather candidates");
+        if ("receiveVideoAnswer".equals(Answer)) {
+            this.getEndpointForUser(sender).gatherCandidates();
+        } else if ("receiveScreenAnswer".equals(Answer)) {
+            this.getScreenEndpointForUser(sender).gatherCandidates();
+        }
+    }
+
+    private WebRtcEndpoint getEndpointForUser(final UserSession sender) {
+        return getWebRtcEndpointForUser(sender, webRtcEndpoint, incomingMedia, "iceCandidate");
+    }
+
+
+    private WebRtcEndpoint getScreenEndpointForUser(final UserSession sender) {
+        return getWebRtcEndpointForUser(sender, webRtcEndpointScreen, incomingMediaScreen, "iceCandidateScreen");
+    }
+
+    private WebRtcEndpoint getWebRtcEndpointForUser(final UserSession sender,
+                                                    WebRtcEndpoint outgoingMedia,
+                                                    ConcurrentMap<String, WebRtcEndpoint> incomingMedia,
+                                                    final String iceCandidateId) {
+        if (sender.getName().equals(name)) {
+            log.debug("PARTICIPANT {}: configuring loopback", this.name);
+            return outgoingMedia;
+        }
+
+        log.debug("PARTICIPANT {}: receiving video from {}", this.name, sender.getName());
+
+        WebRtcEndpoint incoming = incomingMedia.get(sender.getName());
+        if (incoming == null) {
+            log.debug("PARTICIPANT {}: creating new endpoint for {}", this.name, sender.getName());
+            incoming = new WebRtcEndpoint.Builder(pipeline).build();
+            addIceCandidateFoundListener(incoming,iceCandidateId,sender.getName());
+            incomingMedia.put(sender.getName(), incoming);
+        }
+
+        log.debug("PARTICIPANT {}: obtained endpoint for {}", this.name, sender.getName());
+        if ("iceCandidate".equals(iceCandidateId)) {
+            sender.getWebRtcEndpoint().connect(incoming);
+        } else if ("iceCandidateScreen".equals(iceCandidateId)) {
+            sender.getWebRtcEndpointScreen().connect(incoming);
+        }
+        return incoming;
+    }
+
+    void cancelVideoFrom(final String senderName) {
+        log.debug("PARTICIPANT {}: canceling video reception from {}", this.name, senderName);
+        incomingMedia.remove(senderName);
+        log.debug("PARTICIPANT {}: removing endpoint for {}", this.name, senderName);
+        incomingMediaScreen.remove(senderName);
+    }
+
+    void addCandidate(IceCandidate candidate, String name) {
+        addCandidate(candidate, name, webRtcEndpoint, incomingMedia);
+    }
+
+    void addCandidateScreen(IceCandidate candidate, String name) {
+        addCandidate(candidate, name, webRtcEndpointScreen, incomingMediaScreen);
+    }
+
+    private void addCandidate(IceCandidate candidate,
+                              String name,
+                              WebRtcEndpoint outgoingMedia,
+                              ConcurrentMap<String, WebRtcEndpoint> incomingMedia) {
+        if (this.name.compareTo(name) == 0) {
+            outgoingMedia.addIceCandidate(candidate);
+        } else {
+            WebRtcEndpoint webRtc = incomingMedia.get(name);
+            if (webRtc != null) {
+                webRtc.addIceCandidate(candidate);
+            }
+        }
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see java.lang.Object#equals(java.lang.Object)
+     */
+    @Override
+    public boolean equals(Object obj) {
+
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof UserSession)) {
+            return false;
+        }
+        UserSession other = (UserSession) obj;
+        boolean eq = name.equals(other.name);
+        eq &= roomName.equals(other.roomName);
+        return eq;
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * @see java.lang.Object#hashCode()
+     */
+    @Override
+    public int hashCode() {
+        int result = 1;
+        result = 31 * result + name.hashCode();
+        result = 31 * result + roomName.hashCode();
+        return result;
     }
 }
