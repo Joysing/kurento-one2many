@@ -116,3 +116,10 @@ EOF
             name:'用户名',
             sdpOffer : {offerSdp}
             }到 wss://{localhost}:{port}/call（如果是多对多则发送到 wss://{localhost}:{port}/groupcall）
+
+如果想在docker中安装kurento-media-server，这样运行：
+
+        docker run -v /www/web/we7/public_html/WebRtcEndpoint.conf.ini:/etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini -d --name kms -p 8888:8888 kurento/kurento-media-server
+        # 命令解释：/www/web/we7/public_html/WebRtcEndpoint.conf.ini是真实的配置文件，其他照抄就好。
+        
+[kurento官方docker地址](https://hub.docker.com/r/kurento/kurento-media-server/)
