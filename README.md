@@ -117,9 +117,14 @@ EOF
             sdpOffer : {offerSdp}
             }到 wss://{localhost}:{port}/call（如果是多对多则发送到 wss://{localhost}:{port}/groupcall）
 
-如果想在docker中安装kurento-media-server，这样运行：
+注意：如果想在docker中安装kurento-media-server，这样运行：
 ----
         docker run -v /www/web/we7/public_html/WebRtcEndpoint.conf.ini:/etc/kurento/modules/kurento/WebRtcEndpoint.conf.ini -d --name kms -p 8888:8888 kurento/kurento-media-server
         # 命令解释：/www/web/we7/public_html/WebRtcEndpoint.conf.ini是真实的配置文件，其他照抄就好。
-        
 [kurento官方docker地址](https://hub.docker.com/r/kurento/kurento-media-server/)
+
+分享屏幕的话，Chrome要安装这个插件，火狐不用
+----
+插件上传在src/main/resource/plugin/ScreenCapturing。
+
+要注意的是，在manifest.json的content_scripts的matches填写需要使用这个插件的url
